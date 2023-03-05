@@ -225,8 +225,8 @@ class Tracking:
             # summarize info about the current frame
             info = {
                 'frame index': str(self.idx_frame),
-                'detector': self.args.detector,
-                'tracker': self.args.tracker,
+                # 'detector': self.args.detector,
+                # 'tracker': self.args.tracker,
                 'time': '{:.06f} s'.format(average),
                 # 'fps': '{:.03f}'.format((1 / average) if average != 0 else math.inf),
                 'detection numbers': str(detector_outputs.bbox_xywh.shape[0]),

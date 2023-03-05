@@ -5,12 +5,12 @@ class TrackerArgParser(ArgumentParser):
     def __init__(self):
         super(TrackerArgParser, self).__init__()
 
-        self.add_argument("--detector", type=str, default='yolov5',
-                          choices=['yolov3_opencv', 'yolov3', 'yolov5', 'gt'],
-                          help='type of detector to be used')
-        self.add_argument("--tracker", type=str, default='sort',
-                          choices=['sort', 'deepsort', 'bytetrack', 'sdof', 'sort_modified', 'bytetrack_modified'],
-                          help='type of tracker to be used')
+        # self.add_argument("--detector", type=str, default='yolov5',
+        #                   choices=['yolov3_opencv', 'yolov3', 'yolov5', 'gt'],
+        #                   help='type of detector to be used')
+        # self.add_argument("--tracker", type=str, default='sort',
+        #                   choices=['sort', 'deepsort', 'bytetrack', 'sdof', 'sort_modified', 'bytetrack_modified'],
+        #                   help='type of tracker to be used')
 
         self.add_argument("--path", type=str, help='path to input video or directory with images')
         self.add_argument("--data_type", type=str, default="video", help='type of input (video or images)')
@@ -24,7 +24,7 @@ class TrackerArgParser(ArgumentParser):
         self.add_argument("--save_mot_path", type=str, default="./output/result.txt",
                           help='path to output text results in mot format')
 
-        self.add_argument("--camera", action="store", dest="cam", type=int, default="1",
+        self.add_argument("--camera", action="store", dest="cam", type=int, default="0",
                           help='webcam id, value \'-1\' means not to use webcam')
 
         # self.add_argument("--config_detector", type=str, default=None,
