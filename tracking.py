@@ -12,6 +12,7 @@ from tracker import Tracker
 from face_recognitor import FaceRecognitor
 from drawer import Drawer
 from logger import get_logger
+from skvideo.io import FFmpegWriter
 
 project_dir = os.path.join(os.path.dirname(__file__))
 
@@ -69,7 +70,7 @@ class Tracking:
         self.tracker = tracker
         
         self.face_recognitor = FaceRecognitor('./faces/')
-        self.face_id_conformity = {}
+        self.id_face_conformity = {}
         self.timer = Timer()
         self.drawer = Drawer()
 
@@ -126,8 +127,9 @@ class Tracking:
             # path of saved video
             self.save_video_path = self.args.save_video_path
             # create video writer
-            fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-            self.writer = cv2.VideoWriter(self.save_video_path, fourcc, 20, (self.im_width, self.im_height))
+            fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
+            # self.writer = cv2.VideoWriter(self.save_video_path, fourcc, 20, (self.im_width, self.im_height))
+            self.writer = FFmpegWriter(self.save_video_path)
             # logging
             self.logger.info("Save video results to {}".format(self.args.save_video_path))
 
@@ -148,6 +150,7 @@ class Tracking:
 
         # self.logger.handlers = []
         self.logger.manager.loggerDict.pop(__name__)
+        self.writer.close()
         cv2.destroyAllWindows()
         if exc_type:
             print(exc_type, exc_val, exc_tb)
@@ -187,26 +190,36 @@ class Tracking:
             bbox_xywh, identities = tracker_outputs
             self.results.append((self.idx_frame, bbox_xywh, identities))
 
+            # face recognition
             for i, id in enumerate(identities):
-                if id in self.face_id_conformity and self.face_id_conformity[id] != 'unknown':
+                
+                # If face's already been in dict then skip
+                if id in self.id_face_conformity:
                     continue
                 
-                self.face_id_conformity[id] = 'unknown'
+                # Find all faces in object crop
                 x, y, w, h = map(int, bbox_xywh[i])
                 obj_img = img[y: y + h, x: x + w]
                 face_locations_xywh, face_names = self.face_recognitor(obj_img)
-
-                if len(face_names) == 0:
+                
+                face_number = -1
+                max_sq = 0
+                for i in range(len(face_names)):
+                    if face_names[i] == 'Unknown':
+                        continue
+                    x, y, w, h = face_locations_xywh[i]
+                    sq = w * h
+                    if sq > max_sq:
+                        max_sq = sq
+                        face_number = i
+                
+                # If there is no faces, then skip it
+                if face_number == -1:
                     continue
                 
-                current_name = face_names[0]
-                if current_name not in self.face_id_conformity.values():
-                    self.face_id_conformity[id] = current_name
-                    continue
-            
-                current_name_num = list(self.face_id_conformity.values()).index(current_name) 
-                current_name_id = list(self.face_id_conformity.keys())[current_name_num]
-                self.tracker.tracker.trackers[i].id = int(current_name_id - 1)
+                # Take max square face as face of person in the object 
+                current_name = face_names[face_number]
+                self.id_face_conformity[id] = current_name
                 
             
             # summarize info about the current frame
@@ -215,13 +228,13 @@ class Tracking:
                 'detector': self.args.detector,
                 'tracker': self.args.tracker,
                 'time': '{:.06f} s'.format(average),
-                'fps': '{:.03f}'.format((1 / average) if average != 0 else math.inf),
+                # 'fps': '{:.03f}'.format((1 / average) if average != 0 else math.inf),
                 'detection numbers': str(detector_outputs.bbox_xywh.shape[0]),
                 'tracking numbers': str(tracker_outputs.bbox_xywh.shape[0]),
             }
 
             # draw bboxes and info
-            orig_img = self.drawer(orig_img, info, tracker_outputs)
+            orig_img = self.drawer(orig_img, info, tracker_outputs, self.id_face_conformity)
 
             # logging
             if self.idx_frame % 100 == 0:
@@ -236,7 +249,7 @@ class Tracking:
 
             # save video frame
             if self.args.save_video_path:
-                self.writer.write(orig_img)
+                self.writer.writeFrame(orig_img[:, :, ::-1])
 
             if pressed_key == 27:
                 break
